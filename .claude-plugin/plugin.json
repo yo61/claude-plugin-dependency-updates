@@ -1,6 +1,6 @@
 {
   "name": "dependency-updates",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Keep every pinned dependency current with Dependabot and self-hosted Renovate, one owner per pin: set up a repository or org, audit one for pins nothing updates, and give each new pin its owner.",
   "author": {
     "name": "Robin Bowes",
