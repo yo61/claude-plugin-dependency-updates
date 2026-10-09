@@ -1,0 +1,33 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+
+  // Dependabot keeps the action SHAs and pre-commit hooks (.github/dependabot.yaml). Renovate
+  // owns the tool versions CI installs, the annotated *_VERSION values in the workflows.
+  // enabledManagers keeps it off everything Dependabot owns.
+  extends: ["config:recommended", "customManagers:githubActionsVersions"],
+  enabledManagers: ["custom.regex"],
+
+  // The policy this skill prescribes (skills/dependency-updates/references/policy.md).
+  semanticCommits: "enabled",
+  dependencyDashboard: true,
+  minimumReleaseAge: "7 days",
+  minimumReleaseAgeBehaviour: "timestamp-optional",
+  prHourlyLimit: 0,
+  prConcurrentLimit: 10,
+  osvVulnerabilityAlerts: true,
+  vulnerabilityAlerts: {
+    semanticCommitType: "fix",
+    labels: ["security"],
+  },
+
+  packageRules: [
+    {
+      matchUpdateTypes: ["major"],
+      minimumReleaseAge: "14 days",
+    },
+    {
+      matchFileNames: [".github/workflows/**"],
+      semanticCommitScope: "ci",
+    },
+  ],
+}

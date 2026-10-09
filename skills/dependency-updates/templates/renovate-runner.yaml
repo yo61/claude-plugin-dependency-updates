@@ -1,0 +1,103 @@
+---
+# Self-hosted Renovate for this org's repositories that hold a Renovate-owned pin. Each of
+# them carries its own renovate.json5; nothing here configures what Renovate updates.
+#
+# Put this in the org's infrastructure repository as .github/workflows/renovate.yaml, and set
+# RENOVATE_TARGETS below.
+#
+# A zero exit does not show Renovate did anything: a missing permission aborts a repository at
+# INFO level and still exits 0. Nothing here checks for that, since the Dependency Dashboard is
+# left untouched on a run with nothing new. Check each repository's dashboard after changing
+# the App's permissions or this workflow.
+#
+# Auth: the org's Renovate GitHub App, whose client ID and private key
+# set-renovate-app-secrets.sh sets on this repository. The App must be installed on every
+# repository in RENOVATE_TARGETS below.
+name: Renovate
+
+on:
+  schedule:
+    # Daily. This cron is the only schedule: a `schedule` in a repository's renovate.json5
+    # on top of it parks every update outside a window the run may miss, since GitHub
+    # starts scheduled workflows late under load.
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: Log level
+        type: choice
+        default: info
+        options: [debug, info, warn]
+      dryRun:
+        description: Dry run, which logs what would happen and opens nothing
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+env:
+  # Comma-separated repository names in this org.
+  RENOVATE_TARGETS: repo-one,repo-two
+
+jobs:
+  renovate:
+    name: renovate
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Mint a token from the Renovate App
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.RENOVATE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ env.RENOVATE_TARGETS }}
+          # The token carries only these, whatever the installation grants. statuses is
+          # write because minimumReleaseAge posts a renovate/stability-days status, and a
+          # missing permission makes Renovate abort the repository while exiting 0.
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+          permission-workflows: write
+          permission-statuses: write
+          permission-checks: read
+          permission-vulnerability-alerts: read
+
+      - name: Resolve the App's bot identity for commits
+        id: bot-user
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          set -euo pipefail
+          id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)
+          echo "author=${APP_SLUG}[bot] <${id}+${APP_SLUG}[bot]@users.noreply.github.com>" >> "$GITHUB_OUTPUT"
+
+      - name: List the repositories for Renovate
+        id: repos
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          repos=$(jq -cn --arg t "$RENOVATE_TARGETS" --arg o "$OWNER" '$t | split(",") | map($o + "/" + .)')
+          echo "json=${repos}" >> "$GITHUB_OUTPUT"
+
+      - name: Renovate
+        uses: renovatebot/github-action@230ce922b08968d0a4f6f70f295601daff09ef1d # v46.3.7
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+        env:
+          LOG_LEVEL: ${{ inputs.logLevel || 'info' }}
+          # 'false' is Renovate's documented "not a dry run"; an empty string fails validation.
+          RENOVATE_DRY_RUN: ${{ inputs.dryRun && 'full' || 'false' }}
+          RENOVATE_REPOSITORIES: ${{ steps.repos.outputs.json }}
+          RENOVATE_ONBOARDING: "false"
+          RENOVATE_REQUIRE_CONFIG: "required"
+          RENOVATE_USERNAME: "${{ steps.app-token.outputs.app-slug }}[bot]"
+          RENOVATE_GIT_AUTHOR: ${{ steps.bot-user.outputs.author }}

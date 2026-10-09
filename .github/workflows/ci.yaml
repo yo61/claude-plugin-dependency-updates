@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  commitlint:
+    name: Conventional Commits
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: yo61/commitlint-github-action@501ff7bb31eb7133c871318c877d0e43cd1ff500  # v6.3.0 (digest-pinned)
+        with:
+          configFile: commitlint.config.mjs
+
+  validate-plugin:
+    name: plugin.json validation
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate plugin.json shape
+        run: |
+          set -euo pipefail
+          jq -e '
+            (.name | type) == "string" and
+            (.version | type) == "string" and
+            (.description | type) == "string" and
+            (.author == null or (.author | type) == "object") and
+            (.license == null or (.license | type) == "string") and
+            (.homepage == null or (.homepage | type) == "string") and
+            (.repository == null or (.repository | type) == "string")
+          ' .claude-plugin/plugin.json
+      - name: Validate each skill's front matter
+        run: |
+          set -euo pipefail
+          for skill in skills/*/SKILL.md; do
+            dir=$(basename "$(dirname "$skill")")
+            head -1 "$skill" | grep -qx -- '---' || { echo "::error file=${skill}::no front matter"; exit 1; }
+            grep -qx "name: ${dir}" "$skill" || { echo "::error file=${skill}::name is not ${dir}"; exit 1; }
+            grep -q '^description:' "$skill" || { echo "::error file=${skill}::no description"; exit 1; }
+          done
+      # A skill reaches its references by relative link, so a broken one hides material the
+      # agent was meant to read.
+      - name: Check every relative link in the skills resolves
+        run: |
+          set -euo pipefail
+          failed=0
+          while IFS=: read -r file target; do
+            if [[ ! -e "$(dirname "$file")/${target}" ]]; then
+              echo "::error file=${file}::link to ${target} does not resolve"
+              failed=1
+            fi
+          done < <(git grep -oE '\]\([^)#:]+\)' -- 'skills/**/*.md' \
+            | sed -E 's/\]\(([^)]+)\)$/\1/')
+          exit "$failed"
+
+  lint:
+    name: lint
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Lint the runner workflow template
+        env:
+          # renovate: datasource=go depName=github.com/rhysd/actionlint
+          ACTIONLINT_VERSION: v1.7.12
+        run: |
+          set -euo pipefail
+          go install "github.com/rhysd/actionlint/cmd/actionlint@${ACTIONLINT_VERSION}"
+          "$(go env GOPATH)/bin/actionlint" .github/workflows/*.yaml skills/*/templates/renovate-runner.yaml
+
+      # shellcheck is preinstalled on the runner; shfmt is installed at a pinned version. The
+      # four shfmt flags are the project standard, matching the local hook and the editor.
+      - name: Lint the shell templates
+        env:
+          # renovate: datasource=go depName=mvdan.cc/sh/v3
+          SHFMT_VERSION: v3.14.1
+        run: |
+          set -euo pipefail
+          go install "mvdan.cc/sh/v3/cmd/shfmt@${SHFMT_VERSION}"
+          shellcheck skills/*/templates/*.sh
+          "$(go env GOPATH)/bin/shfmt" -i 2 -bn -ci -sr -d skills/*/templates/*.sh
+
+      - name: Validate the Renovate config template
+        env:
+          # renovate: datasource=npm depName=renovate
+          RENOVATE_VERSION: 44.132.2
+        run: |
+          set -euo pipefail
+          npx --yes --package "renovate@${RENOVATE_VERSION}" -- \
+            renovate-config-validator --strict skills/*/templates/renovate.json5
