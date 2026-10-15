@@ -32,7 +32,7 @@ locally before it runs, and the pitfalls that make a configuration look right wh
   workflow, and a script that sets the runner's App secrets from 1Password.
 
 CI checks `plugin.json` and each skill's front matter, that every relative link in a skill
-resolves, and lints the templates: actionlint on the runner workflow, shellcheck and shfmt on
+resolves, and lints the templates: jactionlint on the runner workflow, shellcheck and shfmt on
 the script, and Renovate's own validator on `renovate.json5`.
 
 ## Updates to this repository
