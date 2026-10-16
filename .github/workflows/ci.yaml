@@ -109,7 +109,7 @@ jobs:
       - name: Validate the Renovate config template
         env:
           # renovate: datasource=npm depName=renovate
-          RENOVATE_VERSION: 44.148.1
+          RENOVATE_VERSION: 44.148.4
         run: |
           set -euo pipefail
           npx --yes --package "renovate@${RENOVATE_VERSION}" -- \
