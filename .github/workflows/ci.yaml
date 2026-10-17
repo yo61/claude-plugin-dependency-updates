@@ -89,6 +89,8 @@ jobs:
         env:
           # renovate: datasource=go depName=github.com/jdx/jactionlint/v2
           JACTIONLINT_VERSION: v2.2.0
+          JACTIONLINT_ONLINE: 1
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           go install "github.com/jdx/jactionlint/v2/cmd/jactionlint@${JACTIONLINT_VERSION}"
