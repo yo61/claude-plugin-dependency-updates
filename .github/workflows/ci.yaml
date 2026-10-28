@@ -88,7 +88,7 @@ jobs:
       - name: Lint the runner workflow template
         env:
           # renovate: datasource=go depName=github.com/jdx/jactionlint/v2
-          JACTIONLINT_VERSION: v2.2.0
+          JACTIONLINT_VERSION: v2.3.0
           JACTIONLINT_ONLINE: 1
           GITHUB_TOKEN: ${{ github.token }}
         run: |
