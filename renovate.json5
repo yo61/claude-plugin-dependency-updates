@@ -2,10 +2,11 @@
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
 
   // Dependabot keeps the action SHAs and pre-commit hooks (.github/dependabot.yaml). Renovate
-  // owns the tool versions CI installs, the annotated *_VERSION values in the workflows.
-  // enabledManagers keeps it off everything Dependabot owns.
+  // owns the tool versions CI installs: the annotated *_VERSION values in the workflows, the
+  // mise.toml tools, and the mise version mise-action installs. The packageRules below keep
+  // the github-actions manager off the action SHAs Dependabot owns.
   extends: ["config:recommended", "customManagers:githubActionsVersions"],
-  enabledManagers: ["custom.regex"],
+  enabledManagers: ["custom.regex", "github-actions", "mise"],
 
   // The policy this skill prescribes (skills/dependency-updates/references/policy.md).
   semanticCommits: "enabled",
@@ -24,6 +25,16 @@
     {
       matchUpdateTypes: ["major"],
       minimumReleaseAge: "14 days",
+    },
+    {
+      matchManagers: ["github-actions"],
+      enabled: false,
+    },
+    {
+      matchManagers: ["github-actions"],
+      matchDepTypes: ["uses-with"],
+      matchDepNames: ["jdx/mise"],
+      enabled: true,
     },
     {
       matchFileNames: [".github/workflows/**"],

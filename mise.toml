@@ -1,0 +1,3 @@
+[tools]
+# Read by CI through jdx/mise-action, so a runner and a dev box run the same versions.
+node = "26.13.1"
