@@ -46,7 +46,7 @@ ecosystem such as Go goes to Renovate.
 
 ## Renovate settings
 
-- `semanticCommits: "enabled"`, `dependencyDashboard: true`.
+- `semanticCommits: "enabled"`, `dependencyDashboard: { enabled: true }`.
 - `prHourlyLimit: 0`: the default throttles a bot that runs continuously; a cron run is one
   hour, so the default caps a repository at two pull requests a run.
 - **No `schedule`.** The runner's cron is the only schedule; a second gate on top of it parks

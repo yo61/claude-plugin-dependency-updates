@@ -9,7 +9,7 @@
 
   // The policy this skill prescribes (skills/dependency-updates/references/policy.md).
   semanticCommits: "enabled",
-  dependencyDashboard: true,
+  dependencyDashboard: { enabled: true },
   minimumReleaseAge: "7 days",
   minimumReleaseAgeBehaviour: "timestamp-optional",
   prHourlyLimit: 0,
