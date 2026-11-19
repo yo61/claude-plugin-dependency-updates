@@ -14,7 +14,7 @@
 
   // Policy shared by every repository Renovate updates; keep the copies alike.
   semanticCommits: "enabled",
-  dependencyDashboard: true,
+  dependencyDashboard: { enabled: true },
   // The same cooldown as Dependabot's. Vulnerability fixes skip it.
   minimumReleaseAge: "7 days",
   // A release with no timestamp, such as an image on a registry other than Docker Hub, is
